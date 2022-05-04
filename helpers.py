@@ -2,28 +2,19 @@ import subprocess
 import re
 import json
 
-class Video:
-    def __init__(self, elem, url):
+class Short:
+    def __init__(self, elem=None, url=None):
         self.elem = elem
         self.url = url
-        self.videoId = re.search(r'\?v=(.*)?$', url).group(1).split('&')[0]
+        self.shortId = re.search(r'shorts/(.*)?$', url).group(1)
+        self.videoUrl = 'https://youtube.com/watch?v=%s' % self.shortId
         self.metadata = {}
 
     def get_metadata(self):
-        proc = subprocess.run(['./youtube-dl', '-J', self.url], stdout=subprocess.PIPE)
+        proc = subprocess.run(['./youtube-dl', '-J', self.videoUrl], stdout=subprocess.PIPE)
         self.metadata = json.loads(proc.stdout.decode())
+        return self.metadata
 
 
-class VideoUnavailableException(Exception):
+class ShortUnavailableException(Exception):
     pass
-
-
-def time2seconds(s):
-    s = s.split(':')
-    s.reverse()
-    wait = 0
-    factor = 1
-    for t in s:
-        wait += int(t) * factor
-        factor *= 60
-    return wait
