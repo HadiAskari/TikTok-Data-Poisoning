@@ -6,11 +6,12 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException
 from time import sleep
-from .helpers import Short, ShortUnavailableException
+from helpers import Short, ShortUnavailableException
 from pyvirtualdisplay import Display
 from urllib.parse import quote_plus
+import re
 
-class YTShortDriver:
+class TikTokDriver:
 
     def __init__(self, browser='chrome', profile_dir=None, use_virtual_display=False, headless=False, verbose=False):
 
@@ -33,7 +34,7 @@ class YTShortDriver:
 
     def search(self, query, scroll_times=0):
         # load video search results
-        self.driver.get('https://www.youtube.com/results?search_query=%%23shorts %s' % quote_plus(query))
+        self.driver.get('https://www.tiktok.com/tag/%s' % quote_plus(query))
 
         # scroll page to load more results
         for _ in range(scroll_times):
@@ -44,14 +45,13 @@ class YTShortDriver:
         sleep(0.5)
 
         # collect video-like tags from homepage
-        videos = self.driver.find_elements(By.XPATH, '//div[@id="contents"]/ytd-video-renderer')
+        videos = self.driver.find_elements(By.TAG_NAME, 'a')
 
         # identify actual videos from tags
         for video in videos:
-            a = video.find_elements(By.TAG_NAME, 'a')[0]
-            href = a.get_attribute('href')
-            if href is not None and href.startswith('https://www.youtube.com/shorts'):
-                results.append(Short(a, href))
+            href = video.get_attribute('href')
+            if href is not None and re.match(r'https://www.tiktok.com/@.*?/video/[0-9]+', href) is not None:
+                results.append(Short(video, href))
         return results
 
     def play(self, video, duration=5):
@@ -64,26 +64,31 @@ class YTShortDriver:
 
     def next_short(self):
         self.driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.ARROW_DOWN)
-        sleep(0.5)
+        sleep(1)
 
     def get_current_short(self):
-        return Short(url=self.driver.current_url)
+        # click on video
+        self.driver.find_element(By.TAG_NAME, 'video').click()
+
+        # wait until url changes
+        WebDriverWait(self.driver, 10).until(
+            EC.url_contains('/video/')
+        )
+
+        # save url
+        url = self.driver.current_url
+        url = url.split('?')[0]
+
+        # close video
+        self.driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.ESCAPE)
+
+        return Short(url=url)
 
     def goto_homepage(self):
-        self.driver.get('https://www.youtube.com')
+        self.driver.get('https://www.tiktok.com')
 
     def goto_shorts(self):
         self.goto_homepage()
-        sections = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.ID, 'sections'))
-        )
-        sleep(0.5)
-        sections = sections.find_elements(By.TAG_NAME, 'a')
-        for section in sections:
-            if 'Shorts' in section.text:
-                section.click()
-                return sleep(0.5)
-        raise Exception()
 
     def save_screenshot(self, filename):
         return self.driver.save_screenshot(filename)
@@ -118,12 +123,10 @@ class YTShortDriver:
         options = ChromeOptions()
         options.add_argument('--no-sandbox')
         options.add_argument('--window-size=1920,1080')
-
         if profile_dir is not None:
             options.add_argument('--user-data-dir=%s' % profile_dir)
         if headless:
             options.add_argument('--headless')
-
         return Chrome(options=options)
 
     def __init_firefox(self, profile_dir, headless):
@@ -134,6 +137,5 @@ class YTShortDriver:
             pass
         if headless:
             options.add_argument('--headless')
-
         return Firefox(options=options)
 
