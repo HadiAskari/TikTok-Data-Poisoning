@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException
 from time import sleep
-from helpers import Short, ShortUnavailableException
+from .helpers import Short, ShortUnavailableException
 from pyvirtualdisplay import Display
 from urllib.parse import quote_plus
 import re
@@ -68,6 +68,10 @@ class TikTokDriver:
 
     def get_current_short(self):
         # click on video
+        WebDriverWait(self.driver, 10).until(
+            EC.element_to_be_clickable((By.TAG_NAME, 'video'))
+        )
+
         self.driver.find_element(By.TAG_NAME, 'video').click()
 
         # wait until url changes
