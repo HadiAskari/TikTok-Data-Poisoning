@@ -6,14 +6,12 @@ import json
 
 # load the driver
 
-driver = TikTokDriver(use_virtual_display=True)
+driver = TikTokDriver(use_virtual_display=False)
 
-for video in driver.search('trump'):
-    print(video.url)
+results = driver.search('asmr', scroll_times=5)
+print(len(results))
+# for video in results:
+    # print(video.url)
+    # print(video.description)
 
-
-driver.goto_shorts()
-
-for i in range(10):
-    print(driver.get_current_short().url)
-    driver.next_short()
+driver.close()

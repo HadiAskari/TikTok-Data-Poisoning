@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException
 from time import sleep
-from .helpers import Short
+from helpers import Short
 from pyvirtualdisplay import Display
 from urllib.parse import quote_plus
 import re
@@ -48,10 +48,14 @@ class TikTokDriver:
         videos = self.driver.find_elements(By.TAG_NAME, 'a')
 
         # identify actual videos from tags
-        for video in videos:
+        for ind, video in enumerate(videos):
             href = video.get_attribute('href')
             if href is not None and re.match(r'https://www.tiktok.com/@.*?/video/[0-9]+', href) is not None:
-                results.append(Short(video, href))
+                try:
+                    desc = videos[ind + 3].get_attribute('title')
+                except:
+                    desc = ''
+                results.append(Short(video, href, desc))
         return results
 
     def play(self, video, duration=5):
@@ -134,7 +138,7 @@ class TikTokDriver:
             options.add_argument('--user-data-dir=%s' % profile_dir)
         if headless:
             options.add_argument('--headless')
-        return Chrome(options=options)
+        return Chrome(executable_path='./chromedriver', options=options)
 
     def __init_firefox(self, profile_dir, headless):
         options = FirefoxOptions()
